@@ -1,0 +1,63 @@
+#!/bin/sh
+
+# Bump du dernier chiffre (patch) de package.json à chaque commit — 5.7.0 → 5.7.1 —
+# sauf si la version a été posée à la main, auquel cas on la respecte telle quelle.
+#
+# Trois versions à comparer :
+#   HEAD    = le dernier commit
+#   INDEX   = ce qui part dans le commit en cours  (git show :package.json)
+#   DISQUE  = le fichier tel qu'il est sur le disque
+#
+# Si l'une des deux dernières diffère de HEAD, c'est un geste volontaire (5.7.0 → 5.8.0) :
+# on ne bump pas, et on stage package.json pour que la version voulue soit bien dans le commit.
+# Sans le test sur le DISQUE, une version éditée mais non stagée serait quand même bumpée
+# (le bump lit le disque) et on commiterait 5.8.1 — un numéro que personne n'a choisi.
+#
+# L'index contient toujours package.json, même non modifié (copie de HEAD) : le cas courant
+# tombe donc bien dans la branche « rien n'a bougé, on bump ».
+
+version_grep(){
+	sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1
+}
+
+version_of(){
+	git show "$1:package.json" 2>/dev/null | version_grep
+}
+
+head=$(version_of 'HEAD')
+staged=$(version_of '')
+work=$(version_grep < package.json)
+
+# Premier commit, ou package.json pas encore suivi : rien à comparer
+if [ -z "$head" ]; then
+	exit 0
+fi
+
+if [ "$staged" != "$head" ] || [ "$work" != "$head" ]; then
+	echo "pre-commit: version posée à la main ($head → $work), pas de bump automatique"
+	git add package.json
+	exit 0
+fi
+
+# Remplacement TEXTUEL, pas JSON.parse/stringify : seule la ligne "version" change, le reste
+# du fichier (indentation, ordre des clés) est laissé intact. La regex n'étant pas globale,
+# seule la première occurrence est touchée — celle du package, en tête de fichier.
+node -e '
+	const fs = require("fs"), f = "package.json"
+	const src = fs.readFileSync(f, "utf8")
+	const out = src.replace(/("version"\s*:\s*")(\d+)\.(\d+)\.(\d+)(")/,
+		(m, a, x, y, z, b) => a + x + "." + y + "." + (+z + 1) + b)
+
+	if(out === src) process.exit(3)
+	fs.writeFileSync(f, out)
+'
+
+case $? in
+	0) ;;
+	3) echo "pre-commit: version « $work » non standard, bump ignoré" ; exit 0 ;;
+	*) echo "pre-commit: échec du bump de version" ; exit 1 ;;
+esac
+
+git add package.json
+
+echo "pre-commit: version $head → $(version_of '')"

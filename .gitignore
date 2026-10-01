@@ -1,0 +1,13 @@
+.idea
+.env*
+!.env.example
+node_modules
+.shema
+
+.schema.graphql
+.graphqlconfig
+/graphql.config.yml
+
+/import
+/import-sos
+/docs
