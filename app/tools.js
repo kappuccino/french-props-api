@@ -107,9 +107,14 @@ export function sanitizeAggregate(agg, params={}){
 	return next
 }
 
-// Temporary files folder (uploads, resizes, cache), defaults to ./temp
+// Temporary files folder (uploads, resizes), defaults to ./temp
 export function tempDir(){
 	return process.env.STORAGE_TEMP || process.cwd() + '/temp'
+}
+
+// Thumbnails cache folder, defaults to the cache/ subfolder of the temp folder
+export function cacheDir(){
+	return process.env.STORAGE_CACHE || tempDir() + '/cache'
 }
 
 // ⭐️
@@ -124,7 +129,7 @@ export function tempFileName(src, ext = null, prefix = false, fullPath = true){
 
 	const filePath = `${tempDir()}/${start}${random}${ext}`
 
-	return fullPath ? filePath : filePath.basename(path)
+	return fullPath ? filePath : path.basename(filePath)
 }
 
 

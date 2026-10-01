@@ -9,7 +9,7 @@ import * as mediaAPI from './media.js'
 
 import {requireKnownUser, success, catchErrors, notFound} from '../request.js'
 import path from 'path'
-import {readFile} from 'fs/promises'
+import {readFile, unlink} from 'fs/promises'
 import {mongoIdToFolder, tempDir} from '../tools.js'
 
 const router = express.Router()
@@ -66,6 +66,9 @@ router.post('/media/upload',
 
 			} catch( err){
 				next(err)
+			} finally {
+				// The file now lives in the storage, the uploaded copy is useless
+				await unlink(file.filepath).catch(() => null)
 			}
 
 		})

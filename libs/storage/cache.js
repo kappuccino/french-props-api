@@ -1,7 +1,7 @@
 import {dirname} from 'path'
 import {readFile, readdir, writeFile, mkdir, unlink} from 'fs/promises'
 
-import {mongoIdToFolder, tempDir} from '../../app/tools.js'
+import {mongoIdToFolder, cacheDir} from '../../app/tools.js'
 
 export async function read(file){
 	let raw
@@ -45,5 +45,5 @@ export async function clear(_id){
 }
 
 function filePath(file){
-	return tempDir() + '/cache/' + file
+	return cacheDir() + '/' + file
 }
